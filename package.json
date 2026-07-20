@@ -1,0 +1,10 @@
+{
+  "name": "math-practice-core",
+  "version": "0.1.0",
+  "description": "Core question generator + grading engine for a Georgian grades 2-4 math practice game. Logic only, no UI.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node test/run.js"
+  }
+}
