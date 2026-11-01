@@ -148,7 +148,7 @@ const UI_KA = {
   creditsLink: "კრედიტები",
   creditsTitle: "კრედიტები",
   creditsCharacters: "პერსონაჟები: Open Peeps by Pablo Stanley (openpeeps.com). ლიცენზია CC0 — თავისუფალი გამოყენებისთვის, ატრიბუცია არ საჭიროებს.",
-  creditsFonts: "შრიფტები: Nunito და Noto Sans Georgian. ლიცენზია SIL Open Font License 1.1.",
+  creditsFonts: "შრიფტები: Fredoka, Nunito და Noto Sans Georgian. ლიცენზია SIL Open Font License 1.1.",
   creditsAudio: "ხმოვანი ეფექტები გენერირდება პირდაპირ ბრაუზერში, ფაილების გარეშე. ფონური მუსიკა ცალკეა დამატებული თითოეული თამაშისთვის.",
   creditsLogo: "ლოგო: მოდაზგმულია Twemoji-ის დროშის გრაფიკიდან. ლიცენზია CC BY 4.0 (twemoji, jdecked/twemoji).",
   creditsClose: "დახურვა",
@@ -165,6 +165,9 @@ const UI_KA = {
   g3TableTitle: "შედეგები ცხრილების მიხედვით",
   g3TableCol: "ცხრილი",
   g3NoAttempts: "ამ თამაშში ვერცერთ უჯრას ვერ უპასუხეს.",
+  // ---- results stat tiles (display only; needs proofread) ----
+  statQuestions: "კითხვები",
+  statAccuracy: "სიზუსტე",
 };
 
 // ---- English UI strings (mirror of UI_KA; natural grammar, not literal) ---
@@ -283,7 +286,7 @@ const UI_EN = {
   creditsLink: "Credits",
   creditsTitle: "Credits",
   creditsCharacters: "Characters: Open Peeps by Pablo Stanley (openpeeps.com). Licensed CC0 — free to use, no attribution required.",
-  creditsFonts: "Fonts: Nunito and Noto Sans Georgian. Licensed under the SIL Open Font License 1.1.",
+  creditsFonts: "Fonts: Fredoka, Nunito and Noto Sans Georgian. Licensed under the SIL Open Font License 1.1.",
   creditsAudio: "Sound effects are generated directly in the browser, with no files. Background music is separately added for each game.",
   creditsLogo: "Logo: adapted from Twemoji's flag graphic. Licensed CC BY 4.0 (twemoji, jdecked/twemoji).",
   creditsClose: "Close",
@@ -300,6 +303,8 @@ const UI_EN = {
   g3TableTitle: "Results by Times Table",
   g3TableCol: "Table",
   g3NoAttempts: "No cells were attempted in this game.",
+  statQuestions: "Questions",
+  statAccuracy: "Accuracy",
 };
 
 // UI resolves to the current language's strings on every access, so every
@@ -471,7 +476,7 @@ function randOf(arr) {
 // GSAP. CSS animations keep running and self-clean even when the tab is hidden /
 // rAF is paused, so they never get stuck invisible or leak — the robust choice
 // for fire-and-forget particles. GSAP is reserved for the camera sequences.
-const CONFETTI_COLORS = ["#EF5B2B", "#2F6FE0", "#14C9B4", "#F5A623", "#B23A9E", "#E24D8B"];
+const CONFETTI_COLORS = ["#FF5A2C", "#2E7CF6", "#12C29A", "#FFC02E", "#8A5CF6", "#FF4F93"];
 // Bigger, more satisfying correct-answer burst (Part 5): more + larger bits,
 // wider spread, but still under ~1s and centered so it doesn't bury content.
 function celebrate() {
@@ -578,6 +583,190 @@ function bigResult(text, kind) {
   setTimeout(() => { if (el === bigResultLayer) bigResultLayer = null; el.remove(); }, 1300); // keep in sync with big-result-pop's duration in styles.css
 }
 
+// ===== presentation helpers (display only — no game logic) =====
+function gameParts(key) {
+  // "Game 1 — Speed Race" -> { num: "1", name: "Speed Race" } (works for KA too)
+  const full = UI[key] || "";
+  const [head, ...rest] = full.split(" — ");
+  const num = (head.match(/\d+/) || [""])[0];
+  return { num, name: rest.join(" — ") || full };
+}
+
+const GAME_BADGE = { game1: "⚡", game2: "🎲", game3: "✖️" };
+
+// Readable text colour (ink or white) on top of a team colour.
+function teamInk(hex) {
+  const h = String(hex).replace("#", "");
+  if (h.length !== 6) return "#fff";
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 170 ? "#1E1840" : "#fff";
+}
+function teamVars(color) {
+  return `--tc:${color};--tc-ink:${teamInk(color)}`;
+}
+
+function heroTitleHtml() {
+  const t = UI.appTitle;
+  const cut = state.lang === "en" ? 4 : 3; // Math|Race · მათ|რბოლა
+  return `${esc(t.slice(0, cut))}<span class="ht-2">${esc(t.slice(cut))}</span>`;
+}
+
+// Small illustrated preview for each game (inline SVG, no assets).
+function gameArt(mode) {
+  const F = `font-family="Fredoka, Nunito, sans-serif" font-weight="700"`;
+  if (mode === "game1") {
+    const tile = (x, w, fill, edge, txt, rot, ink = "#fff") => `
+      <g transform="rotate(${rot} ${x + w / 2} 80)">
+        <rect x="${x}" y="54" width="${w}" height="64" rx="16" fill="${edge}"/>
+        <rect x="${x}" y="46" width="${w}" height="64" rx="16" fill="${fill}"/>
+        <text x="${x + w / 2}" y="80" ${F} font-size="42" fill="${ink}" text-anchor="middle" dominant-baseline="central">${txt}</text>
+      </g>`;
+    return `<svg viewBox="0 0 320 160" aria-hidden="true">
+      <g fill="#FFC9B4"><rect x="-10" y="22" width="120" height="8" rx="4"/><rect x="-10" y="132" width="90" height="8" rx="4"/><rect x="230" y="18" width="110" height="8" rx="4"/><rect x="250" y="136" width="90" height="8" rx="4"/></g>
+      <path d="M286 14 L270 42 H282 L272 66 L298 34 H285 L294 14 Z" fill="#FFC02E" stroke="#D18F00" stroke-width="3" stroke-linejoin="round"/>
+      ${tile(28, 64, "#FF5A2C", "#C63A10", "7", -7)}
+      <text x="114" y="80" ${F} font-size="38" fill="#1E1840" text-anchor="middle" dominant-baseline="central">+</text>
+      ${tile(136, 64, "#2E7CF6", "#1A55B8", "5", 5)}
+      <text x="222" y="80" ${F} font-size="38" fill="#1E1840" text-anchor="middle" dominant-baseline="central">=</text>
+      ${tile(242, 52, "#FFC02E", "#D18F00", "?", -4, "#1E1840")}
+    </svg>`;
+  }
+  if (mode === "game2") {
+    const top = [40, 88, 136, 184, 232, 280].map((x) => [x, 48]);
+    const bot = [280, 232, 184, 136, 88, 40].map((x) => [x, 116]);
+    const pts = [...top, ...bot];
+    const d = pts.map((p, i) => `${i ? "L" : "M"}${p[0]} ${p[1]}`).join(" ");
+    const special = { 3: ["#12C29A", "#0A8B6E"], 7: ["#F0443A", "#B4241B"], 9: ["#FF4F93", "#C42466"] };
+    const nodes = pts.map(([x, y], i) => {
+      const last = i === pts.length - 1;
+      const [f, e] = special[i] || (i === 0 ? ["#1E1840", "#000"] : ["#fff", "#C9D3E6"]);
+      return `<circle cx="${x}" cy="${y + 4}" r="14" fill="${last ? "#000" : e}"/>
+        <circle cx="${x}" cy="${y}" r="14" fill="${last ? `url(#ck-${mode})` : f}" stroke="${last ? "#1E1840" : "none"}" stroke-width="2"/>`;
+    }).join("");
+    return `<svg viewBox="0 0 320 160" aria-hidden="true">
+      <defs><pattern id="ck-${mode}" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#fff"/><rect width="5" height="5" fill="#1E1840"/><rect x="5" y="5" width="5" height="5" fill="#1E1840"/></pattern></defs>
+      <path d="${d}" fill="none" stroke="#A9C6F2" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${d}" fill="none" stroke="#FFFDF8" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+      ${nodes}
+      <g><circle cx="88" cy="40" r="11" fill="#FF5A2C" stroke="#fff" stroke-width="3"/><circle cx="184" cy="40" r="11" fill="#2E7CF6" stroke="#fff" stroke-width="3"/></g>
+      <g transform="rotate(14 160 82)">
+        <rect x="143" y="68" width="34" height="34" rx="9" fill="#E9D3B2"/>
+        <rect x="143" y="64" width="34" height="34" rx="9" fill="#fff" stroke="#E9D3B2" stroke-width="2"/>
+        <circle cx="152" cy="73" r="3.6" fill="#1E1840"/><circle cx="160" cy="81" r="3.6" fill="#1E1840"/><circle cx="168" cy="89" r="3.6" fill="#1E1840"/>
+      </g>
+    </svg>`;
+  }
+  // game3 — mini multiplication grid being conquered
+  const cols = 6, rows = 4, s = 30, gap = 6, x0 = 55, y0 = 11;
+  const own = { "0,1": "#FF5A2C", "0,2": "#FF5A2C", "1,0": "#2E7CF6", "1,3": "#12C29A", "2,1": "#2E7CF6", "2,2": "#12C29A", "3,4": "#FF5A2C", "2,5": "#2E7CF6", "3,0": "#12C29A" };
+  let cells = "";
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const x = x0 + c * (s + gap), y = y0 + r * (s + gap);
+    const k = r + "," + c, col = own[k];
+    const target = k === "1,4";
+    if (col) {
+      cells += `<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="7" fill="${col}"/>
+        <rect x="${x}" y="${y + s - 4}" width="${s}" height="4" rx="2" fill="rgba(0,0,0,.18)"/>
+        <text x="${x + s / 2}" y="${y + s / 2}" ${F} font-size="14" fill="#fff" text-anchor="middle" dominant-baseline="central">${(r + 1) * (c + 1)}</text>`;
+    } else if (target) {
+      cells += `<rect x="${x - 3}" y="${y - 3}" width="${s + 6}" height="${s + 6}" rx="9" fill="#FFC02E"/>
+        <rect x="${x}" y="${y}" width="${s}" height="${s}" rx="7" fill="#fff" stroke="#1E1840" stroke-width="3"/>
+        <text x="${x + s / 2}" y="${y + s / 2}" ${F} font-size="16" fill="#1E1840" text-anchor="middle" dominant-baseline="central">?</text>`;
+    } else {
+      cells += `<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="7" fill="${r === c ? "#FFF0C7" : "#fff"}"/>`;
+      if (r === c) cells += `<text x="${x + s / 2}" y="${y + s / 2 + 1}" font-size="13" fill="#D18F00" text-anchor="middle" dominant-baseline="central">★</text>`;
+    }
+  }
+  return `<svg viewBox="0 0 320 160" aria-hidden="true">
+    ${cells}
+    <text x="27" y="80" ${F} font-size="34" fill="#0A8B6E" text-anchor="middle" dominant-baseline="central">×</text>
+    <text x="294" y="80" ${F} font-size="34" fill="#0A8B6E" text-anchor="middle" dominant-baseline="central">=</text>
+  </svg>`;
+}
+
+function stepDots(active) {
+  return `<div class="steps" aria-hidden="true">${[1, 2, 3]
+    .map((n) => `<span class="st ${n < active ? "done" : n === active ? "on" : ""}"></span>`)
+    .join("")}</div>`;
+}
+
+// Ranked podium (top 3 on blocks, the rest as chips). entries: [{name,color,stat}]
+function renderPodiumRow(entries) {
+  const top = entries.slice(0, 3);
+  const rest = entries.slice(3);
+  const cols = top
+    .map((e, i) => `
+      <div class="podium-col p${i + 1}">
+        <div class="podium-name"><span class="tk-dot" style="background:${e.color}"></span>${esc(e.name)}</div>
+        <div class="podium-stat">${esc(e.stat)}</div>
+        <div class="podium-block" style="--pcolor:${e.color}"><span class="podium-rank">${i + 1}</span></div>
+      </div>`)
+    .join("");
+  const restHtml = rest.length
+    ? `<div class="podium-rest">${rest
+        .map((e, i) => `<span class="rest-chip"><b>${i + 4}</b><span class="tk-dot" style="background:${e.color}"></span>${esc(e.name)} · ${esc(e.stat)}</span>`)
+        .join("")}</div>`
+    : "";
+  return `<div class="podium-row">${cols}</div><div class="podium-floor checker"></div>${restHtml}`;
+}
+
+// Stable sort that always puts the official winner first (display only).
+function rankEntries(list, winnerIdx, cmp) {
+  const idx = list.map((_, i) => i).sort((a, b) => cmp(list[a], list[b]) || a - b);
+  if (winnerIdx != null && winnerIdx >= 0) {
+    const at = idx.indexOf(winnerIdx);
+    if (at > 0) { idx.splice(at, 1); idx.unshift(winnerIdx); }
+  }
+  return idx;
+}
+
+// Horizontal correct/incorrect bars (shared by both results screens).
+function renderBars(rows) {
+  const max = Math.max(1, ...rows.map((r) => r.correct + r.incorrect));
+  return `
+    <div class="bar-legend">
+      <span><i style="background:var(--mint)"></i>${UI.colCorrect}</span>
+      <span><i style="background:var(--bad)"></i>${UI.colIncorrect}</span>
+    </div>
+    <div class="bar-list">${rows
+      .map((r, i) => `
+        <div class="bar-row">
+          <div class="bar-name">${esc(r.label)}</div>
+          <div class="bar-track">
+            <i class="b-ok" style="width:${(r.correct / max) * 100}%;animation-delay:${i * 60}ms"></i>
+            <i class="b-bad" style="width:${(r.incorrect / max) * 100}%;animation-delay:${i * 60 + 120}ms"></i>
+          </div>
+          <div class="bar-nums"><span class="good-text">${r.correct}</span><span class="muted">/</span><span class="bad-text">${r.incorrect}</span></div>
+        </div>`)
+      .join("")}</div>`;
+}
+
+// G2 bottom dock: status toast OR the roll call-to-action (never over the board).
+function renderG2Dock() {
+  const g = state.g2;
+  let html = "";
+  if (g.banner) html += `<div class="g2-toast ${g.banner.kind}">${esc(g.banner.text)}</div>`;
+  else if (g.phase === "roll" && !g.busy) {
+    html += `<div class="g2-cta"><button class="btn-primary btn-lg roll-cta" id="g2-roll">${UI.rollNow}</button></div>`;
+  }
+  return html;
+}
+
+function configShell(m, body, startId) {
+  return `
+    <div class="card config-panel ${m.replace("game", "g")}">
+      <div class="config-head">
+        <span class="hud-badge cfg">${GAME_BADGE[m]}</span>
+        <h2>${UI[m]}</h2>
+        <span class="checker" aria-hidden="true"></span>
+      </div>
+      <div class="config-body">${body}</div>
+      <div class="config-foot">
+        <button class="btn-primary btn-lg" id="${startId}">${UI.start} <span class="arrow">→</span></button>
+      </div>
+    </div>`;
+}
+
 // -----------------------------------------------------------------------------
 // Render dispatch
 // -----------------------------------------------------------------------------
@@ -630,64 +819,90 @@ function renderLanding() {
   const feat = (icon, t, b) => `
     <div class="feature-card">
       <div class="feature-icon">${icon}</div>
-      <div class="feature-title">${t}</div>
-      <div class="muted">${b}</div>
+      <div><div class="feature-title">${t}</div><div class="muted">${b}</div></div>
     </div>`;
   const benefit = (icon, t, b) => `
     <div class="benefit-row">
       <div class="benefit-icon">${icon}</div>
       <div><div class="benefit-title">${t}</div><div class="muted">${b}</div></div>
     </div>`;
+  const gameCard = (mode) => {
+    const p = gameParts(mode);
+    return `
+      <button class="hg-card ${mode.replace("game", "g")}" data-land-mode="${mode}">
+        <div class="hg-art">${gameArt(mode)}</div>
+        <div class="hg-label"><span class="hg-num">${p.num}</span><span class="hg-name">${esc(p.name)}</span></div>
+      </button>`;
+  };
+  const updates = String(UI.landUpdatesPlaceholder)
+    .split(/<br\s*\/?>/i)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => `<li>${s}</li>`)
+    .join("");
 
   return `
     <div class="landing">
       <header class="hero">
-        <img class="hero-logo" src="assets/logo.svg" alt="${UI.appTitle} logo" />
-        <h1 class="hero-title">${UI.appTitle}</h1>
-        <p class="hero-tagline">${UI.landHeroTagline}</p>
-        <button class="btn-primary btn-lg hero-start" id="land-start">${UI.landStart} →</button>
+        <div class="hero-copy">
+          <div class="hero-brand">
+            <img class="hero-logo" src="assets/logo.svg" alt="${UI.appTitle} logo" />
+            <span class="hero-flagline checker"></span>
+          </div>
+          <h1 class="hero-title">${heroTitleHtml()}</h1>
+          <p class="hero-tagline">${UI.landHeroTagline}</p>
+          <p class="hero-lead">${UI.landWhatBody}</p>
+          <div class="hero-actions">
+            <button class="btn-primary btn-lg hero-start" id="land-start">${UI.landStart} <span class="arrow">→</span></button>
+          </div>
+        </div>
+        <div class="hero-games">
+          ${gameCard("game1")}
+          ${gameCard("game2")}
+          ${gameCard("game3")}
+        </div>
       </header>
 
-      <section class="card land-section howto-strip">
-        <h2>${UI.howToTitle}</h2>
-        <div class="howto-steps">
-          <div class="howto-step"><span class="howto-num">1</span><span>${UI.howToStep1}</span></div>
-          <div class="howto-step"><span class="howto-num">2</span><span>${UI.howToStep2}</span></div>
-          <div class="howto-step"><span class="howto-num">3</span><span>${UI.howToStep3}</span></div>
+      <div class="finish-band checker" aria-hidden="true"></div>
+
+      <div class="land-grid">
+        <div class="land-side">
+          <section class="land-block">
+            <h2>${UI.howToTitle}</h2>
+            <div class="howto">
+              <div class="howto-step"><span class="howto-num">1</span><div>${UI.howToStep1}</div></div>
+              <div class="howto-step"><span class="howto-num">2</span><div>${UI.howToStep2}</div></div>
+              <div class="howto-step"><span class="howto-num">3</span><div>${UI.howToStep3}</div></div>
+            </div>
+            <div class="feature-grid" aria-label="${UI.landFeaturesTitle}">
+              ${feat("📈", UI.featAdaptiveT, UI.featAdaptiveB)}
+              ${feat("🔎", UI.featInsightT, UI.featInsightB)}
+              ${feat("🎮", UI.featModesT, UI.featModesB)}
+              ${feat("📚", UI.featChaptersT, UI.featChaptersB)}
+            </div>
+          </section>
         </div>
-      </section>
 
-      <section class="card land-section">
-        <h2>${UI.landWhatTitle}</h2>
-        <p class="land-lead">${UI.landWhatBody}</p>
-      </section>
-
-      <section class="land-section">
-        <h2>${UI.landFeaturesTitle}</h2>
-        <div class="feature-grid">
-          ${feat("📈", UI.featAdaptiveT, UI.featAdaptiveB)}
-          ${feat("🔎", UI.featInsightT, UI.featInsightB)}
-          ${feat("🎮", UI.featModesT, UI.featModesB)}
-          ${feat("📚", UI.featChaptersT, UI.featChaptersB)}
+        <div class="land-side">
+          <section class="land-block">
+            <h2>${UI.landBenefitsTitle}</h2>
+            <div class="benefit-list">
+              ${benefit("👩‍🏫", UI.benTeacherT, UI.benTeacherB)}
+              ${benefit("🧒", UI.benStudentT, UI.benStudentB)}
+              ${benefit("🎯", UI.benCurriculumT, UI.benCurriculumB)}
+            </div>
+          </section>
+          <section class="land-block updates">
+            <h2><span class="live-dot"></span>${UI.landUpdatesTitle}</h2>
+            <ul class="update-list">${updates}</ul>
+          </section>
         </div>
-      </section>
+      </div>
 
-      <section class="card land-section">
-        <h2>${UI.landBenefitsTitle}</h2>
-        <div class="benefit-list">
-          ${benefit("👩‍🏫", UI.benTeacherT, UI.benTeacherB)}
-          ${benefit("🧒", UI.benStudentT, UI.benStudentB)}
-          ${benefit("🎯", UI.benCurriculumT, UI.benCurriculumB)}
-        </div>
-      </section>
-
-      <section class="card land-section updates">
-        <h2>📣 ${UI.landUpdatesTitle}</h2>
-        <div class="updates-banner muted">${UI.landUpdatesPlaceholder}</div>
-      </section>
-
-      <p class="proofread-note muted">${UI.proofreadNote}</p>
-      <p class="land-footer"><button class="link-btn" id="open-credits">${UI.creditsLink}</button></p>
+      <footer class="land-foot">
+        <p class="proofread-note">${UI.proofreadNote}</p>
+        <button class="link-btn" id="open-credits">${UI.creditsLink}</button>
+      </footer>
       ${state.showCredits ? renderCreditsModal() : ""}
     </div>`;
 }
@@ -713,6 +928,14 @@ function wireLanding() {
     state.screen = "setup";
     render();
   };
+  // Clicking a game card pre-selects that mode, then goes through team setup.
+  app.querySelectorAll("[data-land-mode]").forEach((btn) => {
+    btn.onclick = () => {
+      state.config.mode = btn.dataset.landMode;
+      state.screen = "setup";
+      render();
+    };
+  });
   document.getElementById("open-credits").onclick = () => {
     state.showCredits = true;
     render();
@@ -731,32 +954,40 @@ function wireLanding() {
 function renderSetup() {
   const n = state.teams.length || 2;
   const rows = state.teams
-    .map(
-      (t, i) => `
-      <div class="team-row">
-        <label>${UI.teamName} ${i + 1}</label>
-        <input type="text" data-team-name="${i}" value="${esc(t.name)}" placeholder="${UI.teamName} ${i + 1}" />
-      </div>`
-    )
-    .join("");
-
-  const options = [2, 3, 4, 5, 6]
-    .map((c) => `<option value="${c}" ${c === n ? "selected" : ""}>${c}</option>`)
+    .map((t, i) => {
+      const color = TOKEN_COLORS[i % TOKEN_COLORS.length];
+      return `
+      <div class="team-row" style="--tc:${color};--tc-soft:${color}33">
+        <span class="team-badge" style="color:${teamInk(color)}">${i + 1}</span>
+        <div class="team-field">
+          <label for="team-name-${i}">${UI.teamName} ${i + 1}</label>
+          <input type="text" id="team-name-${i}" data-team-name="${i}" value="${esc(t.name)}" placeholder="${UI.teamName} ${i + 1}" />
+        </div>
+      </div>`;
+    })
     .join("");
 
   return `
-    <div class="row"><button class="nav-home" id="nav-home">🏠 ${UI.home}</button></div>
-    <h1>${UI.appTitle}</h1>
-    <div class="card stack setup-panel">
-      <h2>${UI.setupTitle}</h2>
-      <div class="field" style="max-width:260px">
-        <label for="team-count">${UI.teamCount}</label>
-        <select id="team-count">${options}</select>
+    <div class="page-head">
+      <div>
+        ${stepDots(1)}
+        <h1>${UI.setupTitle}</h1>
+      </div>
+      <div class="spacer"></div>
+      <button class="nav-home" id="nav-home">🏠 ${UI.home}</button>
+    </div>
+    <div class="card setup-panel">
+      <div class="setup-top">
+        <span class="eyebrow">${UI.teamCount}</span>
+        <div class="stepper" role="group" aria-label="${UI.teamCount}">
+          <button class="stepper-btn" data-team-step="-1" aria-label="−" ${n <= 2 ? "disabled" : ""}>−</button>
+          <span class="stepper-val" id="team-count-val">${n}</span>
+          <button class="stepper-btn" data-team-step="1" aria-label="+" ${n >= 6 ? "disabled" : ""}>+</button>
+        </div>
       </div>
       <div class="team-rows">${rows}</div>
-      <div class="row">
-        <div class="spacer"></div>
-        <button class="btn-primary btn-lg" id="setup-continue">${UI.continue}</button>
+      <div class="setup-actions">
+        <button class="btn-primary btn-lg" id="setup-continue">${UI.continue} <span class="arrow">→</span></button>
       </div>
     </div>`;
 }
@@ -766,30 +997,36 @@ function renderSetup() {
 // -----------------------------------------------------------------------------
 function renderMode() {
   const { mode } = state.config;
+  const tile = (m, descKey) => {
+    const p = gameParts(m);
+    return `
+      <button class="mode-tile ${mode === m ? "selected" : ""}" data-mode="${m}">
+        <div class="mt-art">${gameArt(m)}</div>
+        <div>
+          <div class="mt-head"><span class="hg-num">${p.num}</span><h3>${esc(p.name)}</h3></div>
+          <p class="muted">${UI[descKey]}</p>
+        </div>
+        <span class="mt-check" aria-hidden="true">✓</span>
+      </button>`;
+  };
   return `
-    <h1>${UI.chooseGame}</h1>
+    <div class="page-head">
+      <div>
+        ${stepDots(2)}
+        <h1>${UI.chooseGame}</h1>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn-ghost" id="back-to-setup">← ${UI.setupTitle}</button>
+      <button class="nav-home" id="nav-home">🏠 ${UI.home}</button>
+    </div>
     <div class="mode-grid">
-      <button class="mode-tile ${mode === "game1" ? "selected" : ""}" data-mode="game1">
-        <h3>${UI.game1}</h3>
-        <p class="muted">${UI.game1Desc}</p>
-      </button>
-      <button class="mode-tile ${mode === "game2" ? "selected" : ""}" data-mode="game2">
-        <h3>${UI.game2}</h3>
-        <p class="muted">${UI.game2Desc}</p>
-      </button>
-      <button class="mode-tile ${mode === "game3" ? "selected" : ""}" data-mode="game3">
-        <h3>${UI.game3}</h3>
-        <p class="muted">${UI.game3Desc}</p>
-      </button>
+      ${tile("game1", "game1Desc")}
+      ${tile("game2", "game2Desc")}
+      ${tile("game3", "game3Desc")}
     </div>
     ${mode === "game1" ? renderGame1Config() : ""}
     ${mode === "game2" ? renderGame2Config() : ""}
-    ${mode === "game3" ? renderGame3Config() : ""}
-    <div class="row" style="margin-top:16px">
-      <button id="back-to-setup">← ${UI.setupTitle}</button>
-      <div class="spacer"></div>
-      <button class="nav-home" id="nav-home">🏠 ${UI.home}</button>
-    </div>`;
+    ${mode === "game3" ? renderGame3Config() : ""}`;
 }
 
 function chapterToggles() {
@@ -806,9 +1043,7 @@ function renderGame1Config() {
   const targets = [5, 7, 10]
     .map((v) => `<button class="pill ${v === rt ? "selected" : ""}" data-target="${v}">${v}</button>`)
     .join("");
-  return `
-    <div class="card stack config-panel">
-      <h2>${UI.game1}</h2>
+  return configShell("game1", `
       <div class="field">
         <label>${UI.roundTarget}</label>
         <div class="pills">${targets}</div>
@@ -816,11 +1051,7 @@ function renderGame1Config() {
       <div class="field">
         <label>${UI.chapters}</label>
         <div class="chapter-toggles">${chapterToggles()}</div>
-      </div>
-      <div class="row">
-        <button class="btn-primary btn-lg" id="start-game1">${UI.start}</button>
-      </div>
-    </div>`;
+      </div>`, "start-game1");
 }
 
 // which Open Peeps face a team will use on the board (chosen or stable default)
@@ -849,9 +1080,7 @@ function renderGame2Config() {
         </div>`;
     })
     .join("");
-  return `
-    <div class="card stack config-panel">
-      <h2>${UI.game2}</h2>
+  return configShell("game2", `
       <div class="field">
         <label>${UI.chapters}</label>
         <div class="chapter-toggles">${chapterToggles()}</div>
@@ -860,14 +1089,10 @@ function renderGame2Config() {
         <label>${UI.boardSize}</label>
         <div class="pills">${sizes}</div>
       </div>
-      <div class="field">
+      <div class="field wide">
         <label>${UI.teamCharacters}</label>
         <div class="char-pick-list">${charRows}</div>
-      </div>
-      <div class="row">
-        <button class="btn-primary btn-lg" id="start-game2">${UI.start}</button>
-      </div>
-    </div>`;
+      </div>`, "start-game2");
 }
 
 function renderGame3Config() {
@@ -875,44 +1100,37 @@ function renderGame3Config() {
   const rounds = [25, 40, 60]
     .map((v) => `<button class="pill ${v === rr ? "selected" : ""}" data-g3rounds="${v}">${v}</button>`)
     .join("");
-  return `
-    <div class="card stack config-panel">
-      <h2>${UI.game3}</h2>
+  return configShell("game3", `
       <div class="field">
         <label>${UI.g3Rounds}</label>
         <div class="pills">${rounds}</div>
-      </div>
-      <div class="row">
-        <button class="btn-primary btn-lg" id="start-game3">${UI.start}</button>
-      </div>
-    </div>`;
+      </div>`, "start-game3");
 }
 
 // -----------------------------------------------------------------------------
 // Screen 3 — Game 1 play
 // -----------------------------------------------------------------------------
 function renderPlay() {
+  const d = state.play.difficulty;
   return `
-    <div class="g1-play">
-      <div class="g1-topbar">
-        <div class="row">
-          <h1>${UI.game1}</h1>
-          <div class="spacer"></div>
-          <span class="difficulty-badge" title="${UI.difficultyExplain}">${UI.difficulty}: ${state.play.difficulty}/3</span>
-          ${DEBUG ? `<button id="debug-insight" title="fast-forward to insight">⏩</button>` : ""}
-          <button class="nav-home" id="nav-home">🏠 ${UI.home}</button>
-          <button class="btn-danger" id="stop-btn">${UI.stop}</button>
-        </div>
-        <p class="difficulty-caption muted small">${UI.difficultyExplain}</p>
+    <div class="game-root g1-play">
+      <div class="hud">
+        <div class="hud-title"><span class="hud-badge">${GAME_BADGE.game1}</span><h1>${esc(gameParts("game1").name)}</h1></div>
+        <div class="spacer"></div>
+        <span class="difficulty-badge" title="${UI.difficultyExplain}">${UI.difficulty}
+          <span class="diff-pips" data-level="${d}"><i></i><i></i><i></i></span><b>${d}/3</b></span>
+        ${DEBUG ? `<button id="debug-insight" class="nav-home" title="fast-forward to insight">⏩</button>` : ""}
+        <button class="nav-home" id="nav-home">🏠 ${UI.home}</button>
+        <button class="btn-danger" id="stop-btn">${UI.stop}</button>
       </div>
-      <div class="play-layout">
-        <div class="card scoreboard">
-          <h3>${UI.whoAnswers}</h3>
-          <div class="team-buttons">${renderScoreboard()}</div>
-        </div>
-        <div class="card question-card">
+      <div class="g1-stage">
+        <div class="question-card">
           ${renderQuestion()}
         </div>
+      </div>
+      <div class="team-dock">
+        <div class="dock-label eyebrow">${UI.whoAnswers}</div>
+        <div class="team-buttons">${renderScoreboard()}</div>
       </div>
     </div>`;
 }
@@ -924,10 +1142,11 @@ function renderScoreboard() {
       const sel = i === state.play.selectedTeam ? "selected" : "";
       const locked = isLocked ? "locked" : "";
       const dis = isLocked ? "disabled" : "";
+      const color = TOKEN_COLORS[i % TOKEN_COLORS.length];
       return `
-      <button class="team-btn ${sel} ${locked}" data-team="${i}" ${dis}
+      <button class="team-btn ${sel} ${locked}" data-team="${i}" ${dis} style="${teamVars(color)}"
               title="${isLocked ? esc(UI.teamAlreadyTried) : ""}">
-        <span class="tk-dot" style="background:${TOKEN_COLORS[i % TOKEN_COLORS.length]}"></span>
+        <span class="tk-dot" style="background:${color}"></span>
         <span class="team-name">${esc(t.name)}</span>
         <span class="score">${t.score}</span>
       </button>`;
@@ -945,25 +1164,25 @@ function renderQuestion() {
   const fbHtml = fb ? `<div class="feedback ${fb.kind}">${esc(fb.text)}</div>` : `<div class="feedback"></div>`;
 
   return `
-    <div class="question-header">
-      <div class="peep-wrap">
-        <img class="peep" id="peep-img" src="assets/characters/peep-${state.play.character}.svg" alt="character" />
-        <div class="peep-asks">${UI.asksLabel}</div>
+    <div class="peep-wrap">
+      <div class="peep-stage"><img class="peep" id="peep-img" src="assets/characters/peep-${state.play.character}.svg" alt="character" /></div>
+      <div class="peep-asks">${UI.asksLabel}</div>
+    </div>
+    <div class="q-main">
+      <div class="q-bubble"><div class="question-text">${esc(questionTextFor(q))}</div></div>
+      ${!teamChosen ? `<p class="pick-hint">${UI.pickTeamFirst}</p>` : ""}
+      <div class="answer-area ${disabledCls}">
+        ${renderAnswerControls(q)}
       </div>
-      <div class="question-text">${esc(questionTextFor(q))}</div>
-    </div>
-    ${!teamChosen ? `<p class="muted">${UI.pickTeamFirst}</p>` : ""}
-    <div class="answer-area ${disabledCls}">
-      ${renderAnswerControls(q)}
-    </div>
-    ${fbHtml}`;
+      ${fbHtml}
+    </div>`;
 }
 
 function renderAnswerControls(q) {
   if (q.format === "numeric") {
     return `
-      <div class="row">
-        <input type="number" id="numeric-input" placeholder="?" style="font-size:22px;width:160px" />
+      <div class="num-entry">
+        <input type="number" id="numeric-input" placeholder="?" inputmode="numeric" />
         <button class="btn-primary btn-lg" id="numeric-submit">${UI.submit}</button>
       </div>`;
   }
@@ -988,10 +1207,10 @@ function renderAnswerControls(q) {
     const preview = picked.map((i) => q.options[i].value).join(" , ");
     const ready = picked.length === q.options.length;
     return `
-      <p class="muted">${UI.orderHint}</p>
+      <p class="order-hint">${UI.orderHint}</p>
       <div class="order-boxes">${boxes}</div>
       <div class="order-preview">${preview ? esc(preview) : "&nbsp;"}</div>
-      <div class="row">
+      <div class="order-actions">
         <button class="btn-primary btn-lg" id="order-submit" ${ready ? "" : "disabled"}>${UI.submit}</button>
         <button id="order-reset">${UI.resetPick}</button>
       </div>`;
@@ -1004,25 +1223,32 @@ function renderAnswerControls(q) {
 // Win screen
 // -----------------------------------------------------------------------------
 function renderWin() {
+  const teams = state.teams;
+  const winnerIdx = teams.findIndex((t) => t.name === state.play.winnerName && t.score >= state.config.roundTarget);
+  const order = rankEntries(teams, winnerIdx, (a, b) => b.score - a.score);
+  const entries = order.map((i) => ({
+    name: teams[i].name,
+    color: TOKEN_COLORS[i % TOKEN_COLORS.length],
+    stat: `${UI.g3Points}: ${teams[i].score}`,
+  }));
   return renderPodium({
     name: state.play.winnerName || "",
-    color: state.play.winnerColor || "var(--accent-3)",
+    color: state.play.winnerColor || "var(--go)",
     btnId: "win-continue",
     btnLabel: `${UI.seeResults} →`,
+    entries,
   });
 }
 
 // Shared podium-style win screen (GSAP-animated in wireUp).
-function renderPodium({ name, color, btnId, btnLabel }) {
+function renderPodium({ name, color, btnId, btnLabel, entries }) {
   return `
     <div class="podium-screen">
       <div class="podium-trophy">🏆</div>
       <div class="podium-sub">${UI.wonPrefix}</div>
       <div class="podium-winner" style="color:${color}">${esc(name)}</div>
-      <div class="podium-block" style="--pcolor:${color}">
-        <span class="podium-rank">1</span>
-      </div>
-      <div class="row" style="justify-content:center;margin-top:26px">
+      ${entries && entries.length ? renderPodiumRow(entries) : `<div class="podium-row"><div class="podium-col p1"><div class="podium-block" style="--pcolor:${color}"><span class="podium-rank">1</span></div></div></div>`}
+      <div class="podium-actions">
         <button class="btn-primary btn-lg" id="${btnId}">${btnLabel}</button>
       </div>
     </div>`;
@@ -1047,37 +1273,27 @@ function playPodiumReveal() {
 function renderInsight() {
   const history = state.play.history;
 
-  // Per-type correct/incorrect tally (only types that actually came up).
   const byType = {};
   for (const h of history) {
     const b = (byType[h.type] = byType[h.type] || { correct: 0, incorrect: 0 });
     if (h.correct) b.correct++;
     else b.incorrect++;
   }
-  const typeRows = Object.keys(byType)
-    .map((type) => {
-      const b = byType[type];
-      return `
-        <tr>
-          <td>${TYPE_LABELS[type] || type}</td>
-          <td class="num good-text">${b.correct}</td>
-          <td class="num bad-text">${b.incorrect}</td>
-        </tr>`;
-    })
-    .join("");
+  const rows = Object.keys(byType).map((type) => ({ label: TYPE_LABELS[type] || type, ...byType[type] }));
+  const totalCorrect = history.filter((h) => h.correct).length;
+  const acc = history.length ? Math.round((totalCorrect / history.length) * 100) : 0;
 
   const typeSection = history.length
-    ? `<table class="insight-table">
-         <thead><tr><th>${UI.byTypeTitle}</th><th class="num">${UI.colCorrect}</th><th class="num">${UI.colIncorrect}</th></tr></thead>
-         <tbody>${typeRows}</tbody>
-       </table>`
-    : `<p class="muted">${UI.noQuestions}</p>`;
+    ? `<section class="card">
+         <h3>${UI.byTypeTitle}</h3>
+         ${renderBars(rows)}
+       </section>`
+    : `<section class="card"><p class="muted" style="margin:0">${UI.noQuestions}</p></section>`;
 
-  // Mistake patterns — a SEPARATE lens (counted per wrong attempt, so these
-  // numbers intentionally don't need to reconcile with the per-question table).
   const patterns = Object.keys(state.play.patternCounts).filter((k) => state.play.patternCounts[k] > 0);
   const patternSection = patterns.length
-    ? `<h3 style="margin-top:24px">${UI.patternsTitle}</h3>
+    ? `<section class="card">
+       <h3>${UI.patternsTitle}</h3>
        <div class="pattern-list">
          ${patterns
            .map((tag) => {
@@ -1092,20 +1308,27 @@ function renderInsight() {
              </div>`;
            })
            .join("")}
-       </div>`
+       </div></section>`
     : "";
 
   const winnerBanner = state.play.winnerName
     ? `<div class="insight-winner">🏆 ${UI.wonPrefix}: <b>${esc(state.play.winnerName)}</b></div>`
-    : `<div class="muted">${UI.insightStopped}</div>`;
+    : `<div class="insight-winner">⏸ ${UI.insightStopped}</div>`;
 
   return `
-    <div class="card">
-      <h1 style="margin-top:0">${UI.insightTitle}</h1>
-      ${winnerBanner}
-      <div style="margin-top:16px">${typeSection}</div>
+    <div class="results">
+      <div class="results-head">
+        <h1>${UI.insightTitle}</h1>
+        ${winnerBanner}
+      </div>
+      <div class="stat-tiles">
+        <div class="stat-tile"><div class="st-val">${history.length}</div><div class="st-lbl">${UI.statQuestions}</div></div>
+        <div class="stat-tile t-acc"><div class="st-val">${acc}%</div><div class="st-lbl">${UI.statAccuracy}</div></div>
+        <div class="stat-tile t-diff"><div class="st-val">${state.play.difficulty}/3</div><div class="st-lbl">${UI.difficulty}</div></div>
+      </div>
+      ${typeSection}
       ${patternSection}
-      <div class="row" style="justify-content:center;margin-top:28px">
+      <div class="row" style="justify-content:center;margin-top:8px">
         <button class="btn-primary btn-lg" id="insight-done">${UI.backToMenu}</button>
       </div>
     </div>`;
@@ -1113,13 +1336,15 @@ function renderInsight() {
 
 // ---- stop confirmation modal ----
 function renderModal() {
-  const msg = state.modal.kind === "home" ? UI.homeConfirm : UI.stopConfirm;
+  const isHome = state.modal.kind === "home";
+  const msg = isHome ? UI.homeConfirm : UI.stopConfirm;
   return `
     <div class="modal-backdrop">
-      <div class="modal stack">
-        <p style="font-size:18px;font-weight:600">${msg}</p>
+      <div class="modal">
+        <div class="modal-icon">${isHome ? "🏠" : "⏸️"}</div>
+        <p class="modal-msg">${msg}</p>
         <div class="row" style="justify-content:center">
-          <button class="btn-danger btn-lg" id="modal-yes">${UI.yes}</button>
+          <button class="btn-lg" id="modal-yes">${UI.yes}</button>
           <button class="btn-primary btn-lg" id="modal-no">${UI.no}</button>
         </div>
       </div>
@@ -1186,13 +1411,15 @@ function wireUp() {
 }
 
 function wireSetup() {
-  const sel = document.getElementById("team-count");
-  syncTeamCount(Number(sel.value)); // ensure array matches on first paint
-  sel.onchange = () => {
-    captureTeamNames();
-    syncTeamCount(Number(sel.value));
-    render();
-  };
+  if (state.teams.length < 2) { syncTeamCount(2); render(); return; } // same 2-team floor as before
+  app.querySelectorAll("[data-team-step]").forEach((btn) => {
+    btn.onclick = () => {
+      captureTeamNames();
+      const next = Math.max(2, Math.min(6, state.teams.length + Number(btn.dataset.teamStep)));
+      syncTeamCount(next);
+      render();
+    };
+  });
   app.querySelectorAll("[data-team-name]").forEach((inp) => {
     inp.oninput = () => {
       state.teams[Number(inp.dataset.teamName)].name = inp.value;
@@ -1210,6 +1437,9 @@ function wireMode() {
     btn.onclick = () => {
       state.config.mode = btn.dataset.mode;
       render();
+      // bring the freshly opened settings panel (and its Start button) into view
+      const panel = app.querySelector(".config-panel");
+      if (panel) panel.scrollIntoView({ behavior: "smooth", block: "end" });
     };
   });
   app.querySelectorAll("[data-chapter]").forEach((btn) => {
@@ -1524,7 +1754,7 @@ function endGame() {
 
 // Cohesive team palette (matches --team-* in styles.css), reused for Game 1
 // scoreboard dots and Game 2 tokens so team colours are consistent app-wide.
-const TOKEN_COLORS = ["#EF5B2B", "#2F6FE0", "#14C9B4", "#F5A623", "#B23A9E", "#E24D8B"];
+const TOKEN_COLORS = ["#FF5A2C", "#2E7CF6", "#0FB48E", "#FFB21E", "#8A5CF6", "#F0428C"];
 const TEAM_PEEP_COUNT = 12; // bundled team-1..12.svg (distinct from the question-asker set)
 const HOP_MS = 300; // per-square hop (spec: under ~500ms)
 
@@ -1610,7 +1840,6 @@ function renderG2Play() {
   const g = state.g2;
   const team = g.teams[g.turn];
 
-  // compact team position chips (score = current square)
   const chips = g.teams
     .map(
       (t, i) => `<span class="pos-chip ${i === g.turn ? "current" : ""}">
@@ -1620,23 +1849,24 @@ function renderG2Play() {
     .join("");
 
   return `
-    <div class="g2-root" style="--cols:${g.cols};--rows:${g.rows}">
-      <div class="g2-topbar compact">
+    <div class="game-root g2-root" style="--cols:${g.cols};--rows:${g.rows};${teamVars(team.color)}">
+      <div class="hud">
         <div class="g2-turn">
-          <span class="muted">${UI.turnOf}:</span>
-          <span class="turn-name"><span class="tk-dot" style="background:${team.color}"></span>${esc(team.name)}</span>
+          <span class="turn-face"><img src="assets/characters/team-${team.peep}.svg" alt="" /></span>
+          <span><span class="turn-lbl">${UI.turnOf}</span><span class="turn-name">${esc(team.name)}</span></span>
         </div>
         <div class="pos-chips">${chips}</div>
         <div class="spacer"></div>
         <div class="g2-legend">
-          <span class="lg bonus">➕</span>
-          <span class="lg trap">⚠️</span>
-          <span class="lg steal">🔀</span>
+          <span class="lg bonus" title="${UI.sqBonus}"><i>+3</i><span class="lg-t">${UI.sqBonus}</span></span>
+          <span class="lg trap" title="${UI.sqTrap}"><i>!</i><span class="lg-t">${UI.sqTrap}</span></span>
+          <span class="lg steal" title="${UI.sqSteal}"><i>⇄</i><span class="lg-t">${UI.sqSteal}</span></span>
         </div>
-        <button class="nav-home" id="nav-home">🏠</button>
+        <button class="nav-home" id="nav-home" title="${UI.home}">🏠</button>
         <button class="btn-danger" id="g2-stop">${UI.stop}</button>
       </div>
       <div class="g2-board-area">${renderBoard()}</div>
+      <div class="g2-dock">${renderG2Dock()}</div>
       ${renderG2Overlay()}
     </div>`;
 }
@@ -1690,59 +1920,66 @@ function renderBoard() {
   const cols = g.cols, rows = g.rows;
   const W = cols * BOARD_U, H = rows * BOARD_U;
 
-  // the road: a single path through square centres 1..N (serpentine)
   let d = "";
   for (let s = 1; s <= g.size; s++) {
     const p = boardCenter(s, cols);
     d += (s === 1 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`);
   }
 
-  // square nodes
+  const ICON = {
+    bonus: `<text class="node-icon" y="-15">+3</text>`,
+    trap: `<g transform="translate(0,-16)"><path d="M0 -10 L10 7 H-10 Z" fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round"/><text class="node-icon" y="1" style="fill:var(--bad);font-size:14px">!</text></g>`,
+    steal: `<g transform="translate(0,-16)" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M-10 -3 H8 M4 -7 L8 -3 L4 1"/><path d="M10 4 H-8 M-4 0 L-8 4 L-4 8"/></g>`,
+  };
+
+  const tagW = Math.max(72, String(UI.startZone).length * 11 + 28);
   let nodes = "";
   for (let s = 1; s <= g.size; s++) {
     const p = boardCenter(s, cols);
     const type = g.types[s];
-    const icon = type === "bonus" ? "➕" : type === "trap" ? "⚠️" : type === "steal" ? "🔀" : "";
-    nodes += `<g class="node ${type}" transform="translate(${p.x},${p.y})">
-        <circle class="node-bg" r="34"></circle>
-        ${icon ? `<text class="node-icon" y="-20">${icon}</text>` : ""}
-        <text class="node-num" y="${icon ? 10 : 0}">${s}</text>
+    const extra = s === 1 && type === "normal" ? " start" : s === g.size && type === "normal" ? " finish" : "";
+    const icon = ICON[type] || "";
+    nodes += `<g class="node ${type}${extra}" transform="translate(${p.x},${p.y})">
+        <circle class="node-edge" r="36" cy="6"></circle>
+        <circle class="node-bg" r="36"></circle>
+        ${icon}
+        <text class="node-num" y="${icon ? 9 : 0}">${s}</text>
+        ${s === 1 ? `<g transform="translate(0,52)"><rect class="node-tag-bg" x="${-tagW / 2}" y="-11" width="${tagW}" height="22" rx="11"></rect><text class="node-tag">${esc(UI.startZone)}</text></g>` : ""}
       </g>`;
   }
 
-  // character tokens (on top). pos 0 shows at the start (square 1) so the
-  // opening camera has a subject; teams sharing a spot are clustered. The
-  // colored RING is the primary team signal; the Open Peeps face is flavour.
-  const visPos = (t) => Math.max(1, Math.min(t.pos, g.size)); // 0 -> start (sq 1)
+  const visPos = (t) => Math.max(1, Math.min(t.pos, g.size));
   let tokens = "";
   g.teams.forEach((t, i) => {
     const vp = visPos(t);
     const p = boardCenter(vp, cols);
     const same = g.teams.filter((x) => visPos(x) === vp);
     const off = tokenClusterOffset(same.indexOf(t), same.length);
-    tokens += `<g class="btoken" data-team="${i}" transform="translate(${p.x + off.x},${p.y + off.y})">
-        <ellipse class="btoken-shadow" cx="0" cy="26" rx="18" ry="6"></ellipse>
+    const cur = i === g.turn;
+    tokens += `<g class="btoken${cur ? " current" : ""}" data-team="${i}" style="transform:translate(${p.x + off.x}px,${p.y + off.y}px)">
+        <ellipse class="btoken-shadow" cx="0" cy="28" rx="20" ry="6"></ellipse>
+        ${cur ? `<circle class="btoken-halo" r="35" stroke="${t.color}"></circle>` : ""}
         <circle class="btoken-ring" r="27" fill="#fff" stroke="${t.color}" stroke-width="6"></circle>
         <image href="assets/characters/team-${t.peep}.svg" x="-30" y="-36" width="60" height="60" clip-path="url(#tokclip)" preserveAspectRatio="xMidYMid slice"></image>
-        <circle class="btoken-num-bg" cx="16" cy="18" r="12" fill="${t.color}"></circle>
-        <text class="btoken-num" x="16" y="18">${i + 1}</text>
+        <circle class="btoken-num-bg" cx="18" cy="18" r="12" fill="${t.color}"></circle>
+        <text class="btoken-num" x="18" y="18">${i + 1}</text>
       </g>`;
   });
 
+  // padded viewBox so clustered tokens / the START tag never clip at the edges
   return `<div class="board" style="--cols:${cols};--rows:${rows}">
-      <svg class="trail-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
-        <defs><clipPath id="tokclip"><circle r="24"></circle></clipPath></defs>
+      <svg class="trail-svg" viewBox="-30 -46 ${W + 60} ${H + 96}" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <clipPath id="tokclip"><circle r="24"></circle></clipPath>
+          <pattern id="checkpat" width="18" height="18" patternUnits="userSpaceOnUse"><rect width="18" height="18" fill="#fff"/><rect width="9" height="9" fill="#1E1840"/><rect x="9" y="9" width="9" height="9" fill="#1E1840"/></pattern>
+        </defs>
+        <path class="road-shadow" d="${d}"></path>
         <path class="road-outer" d="${d}"></path>
         <path class="road-inner" d="${d}"></path>
         <path class="road-dash" d="${d}"></path>
         ${nodes}
         ${tokens}
       </svg>
-      <div class="board-legend">
-        <span class="bl-item bonus">➕ ${UI.sqBonus}</span>
-        <span class="bl-item trap">⚠️ ${UI.sqTrap}</span>
-        <span class="bl-item steal">🔀 ${UI.sqSteal}</span>
-      </div>
     </div>`;
 }
 
@@ -1762,7 +1999,7 @@ function positionTokens() {
     const p = boardCenter(vp, g.cols);
     const same = g.teams.filter((x) => visPos(x) === vp);
     const off = tokenClusterOffset(same.indexOf(t), same.length);
-    el.setAttribute("transform", `translate(${p.x + off.x},${p.y + off.y})`);
+    el.style.transform = `translate(${p.x + off.x}px,${p.y + off.y}px)`;
   });
 }
 
@@ -1815,41 +2052,33 @@ function renderG2Overlay() {
   const g = state.g2;
   const team = g.teams[g.turn];
   let html = "";
-  if (g.banner) html += `<div class="g2-toast ${g.banner.kind}">${esc(g.banner.text)}</div>`;
 
-  // resting board view: a clear call-to-action to start this team's turn (dice hidden)
-  if (g.phase === "roll" && !g.busy) {
-    html += `
-      <div class="g2-cta">
-        <button class="btn-primary btn-lg roll-cta" id="g2-roll">${UI.rollNow}</button>
-      </div>`;
-  }
-
-  // turn announcement overlay
   if (g.phase === "announce") {
     html += `
       <div class="turn-overlay">
-        <div class="turn-announce" id="turn-announce">
-          <span class="tk-dot big" style="background:${team.color}"></span>
+        <div class="turn-announce" id="turn-announce" style="${teamVars(team.color)};color:${teamInk(team.color)}">
+          <div class="ta-face"><img src="assets/characters/team-${team.peep}.svg" alt="" /></div>
           <span>${esc(team.name)}${UI.turnAnnounce}</span>
         </div>
       </div>`;
   }
 
-  // big 3D dice reveal (GSAP-driven)
   if (g.phase === "dice") {
     html += `<div class="dice-overlay">${renderBigDice()}</div>`;
   }
 
-  // question overlay
   if (g.phase === "question" && g.question) {
     html += `
       <div class="g2-overlay">
-        <div class="g2-card">
-          <div class="g2-badge ${g.landedType}">${landedBadge(g.landedType)}</div>
-          <p class="muted">${UI.answerToKeep}</p>
-          <div class="g2-question">${esc(questionTextFor(g.question))}</div>
-          <div class="g2-answer">${renderG2Answer(g.question)}</div>
+        <div class="g2-card ${g.landedType}">
+          <div class="g2-card-head">
+            <span class="g2-badge">${landedBadge(g.landedType)}</span>
+            <p class="muted">${UI.answerToKeep}</p>
+          </div>
+          <div class="g2-card-body">
+            <div class="g2-question">${esc(questionTextFor(g.question))}</div>
+            <div class="g2-answer">${renderG2Answer(g.question)}</div>
+          </div>
         </div>
       </div>`;
   }
@@ -1858,12 +2087,12 @@ function renderG2Overlay() {
 
 function renderG2Answer(q) {
   if (q.format === "numeric") {
-    return `<div class="row" style="justify-content:center">
-      <input type="number" id="g2-num" placeholder="?" style="font-size:22px;width:160px" />
+    return `<div class="num-entry">
+      <input type="number" id="g2-num" placeholder="?" inputmode="numeric" />
       <button class="btn-primary btn-lg" id="g2-num-submit">${UI.submit}</button></div>`;
   }
   if (q.format === "multiple_choice") {
-    return `<div class="mc-grid" style="justify-content:center">${q.options
+    return `<div class="mc-grid">${q.options
       .map((o, i) => `<button class="mc-btn" data-g2mc="${i}">${esc(o)}</button>`)
       .join("")}</div>`;
   }
@@ -1880,10 +2109,10 @@ function renderG2Answer(q) {
     const preview = picked.map((i) => q.options[i].value).join(" , ");
     const ready = picked.length === q.options.length;
     return `
-      <p class="muted">${UI.orderHint}</p>
-      <div class="order-boxes" style="justify-content:center">${boxes}</div>
+      <p class="order-hint">${UI.orderHint}</p>
+      <div class="order-boxes">${boxes}</div>
       <div class="order-preview">${preview ? esc(preview) : "&nbsp;"}</div>
-      <div class="row" style="justify-content:center">
+      <div class="order-actions">
         <button class="btn-primary btn-lg" id="g2-order-submit" ${ready ? "" : "disabled"}>${UI.submit}</button>
         <button id="g2-order-reset">${UI.resetPick}</button>
       </div>`;
@@ -1894,11 +2123,19 @@ function renderG2Answer(q) {
 function renderG2Win() {
   const g = state.g2;
   const w = g && g.winner != null ? g.teams[g.winner] : null;
+  const entries = g
+    ? rankEntries(g.teams, g.winner, (a, b) => b.pos - a.pos).map((i) => ({
+        name: g.teams[i].name,
+        color: g.teams[i].color,
+        stat: `${Math.min(g.teams[i].pos, g.size)} / ${g.size}`,
+      }))
+    : [];
   return renderPodium({
     name: w ? w.name : "",
-    color: w ? w.color : "var(--accent-3)",
+    color: w ? w.color : "var(--go)",
     btnId: "g2win-menu",
     btnLabel: UI.backToMenu,
+    entries,
   });
 }
 
@@ -2346,28 +2583,35 @@ function renderG3Play() {
   const g = state.g3;
   const q = g.question;
   const roundNum = Math.min(g.round + 1, g.roundCap);
+  const pct = Math.min(100, (g.round / g.roundCap) * 100);
   const chips = g.teams
     .map(
       (t) => `<span class="g3-chip"><span class="tk-dot" style="background:${t.color}"></span>${esc(t.name)} <b>${t.score}</b></span>`
     )
     .join("");
   return `
-    <div class="g3-root">
-      <div class="g2-topbar g3-topbar">
-        <div class="g3-round">${UI.g3Round} ${roundNum}/${g.roundCap}</div>
+    <div class="game-root g3-root">
+      <div class="hud">
+        <div class="hud-title"><span class="hud-badge">${GAME_BADGE.game3}</span></div>
+        <div class="g3-progress">
+          <span class="g3-round">${UI.g3Round} ${roundNum}/${g.roundCap}</span>
+          <span class="g3-bar"><i style="width:${pct}%"></i></span>
+        </div>
         <div class="g3-chips">${chips}</div>
         <div class="spacer"></div>
-        <button class="nav-home" id="nav-home">🏠</button>
+        <button class="nav-home" id="nav-home" title="${UI.home}">🏠</button>
         <button class="btn-danger" id="g3-stop">${UI.stop}</button>
       </div>
       <div class="g3-main">
         <div class="g3-grid-wrap">${renderG3Grid()}</div>
         <div class="g3-panel">
           <div class="g3-asker">
-            <img class="g3-peep" id="g3-peep-img" src="assets/characters/peep-${g.character}.svg" alt="character" />
-            <div class="g3-question">${q.r} × ${q.c} = ?</div>
+            <div class="g3-peep-stage"><img class="g3-peep" id="g3-peep-img" src="assets/characters/peep-${g.character}.svg" alt="character" /></div>
+            <div class="g3-q-wrap">
+              <div class="g3-question">${q.r} × ${q.c} = ?</div>
+              <div class="g3-conquer">${UI.g3Conquer}</div>
+            </div>
           </div>
-          <div class="g3-conquer muted">${UI.g3Conquer}</div>
           <div class="g3-teams">${renderG3Scoreboard()}</div>
           <div class="answer-area ${g.selectedTeam === null ? "disabled" : ""}">${renderG3Answer()}</div>
           ${g.feedback ? `<div class="feedback ${g.feedback.kind}">${esc(g.feedback.text)}</div>` : `<div class="feedback"></div>`}
@@ -2378,10 +2622,11 @@ function renderG3Play() {
 
 function renderG3Grid() {
   const g = state.g3;
+  const tr = g.target ? g.target.r : -1, tc = g.target ? g.target.c : -1;
   let cells = `<div class="g3-corner"></div>`;
-  for (let c = 1; c <= G3_SIZE; c++) cells += `<div class="g3-head">${c}</div>`;
+  for (let c = 1; c <= G3_SIZE; c++) cells += `<div class="g3-head${c === tc ? " hl" : ""}">${c}</div>`;
   for (let r = 1; r <= G3_SIZE; r++) {
-    cells += `<div class="g3-head">${r}</div>`;
+    cells += `<div class="g3-head${r === tr ? " hl" : ""}">${r}</div>`;
     for (let c = 1; c <= G3_SIZE; c++) {
       const key = g3Key(r, c);
       const owner = g.owner[key];
@@ -2392,17 +2637,17 @@ function renderG3Grid() {
       let style = "";
       if (owner !== undefined) {
         cls += " claimed";
-        style = `background:${g.teams[owner].color}`;
-        content = r * c; // product revealed ONLY once claimed
+        style = `background:${g.teams[owner].color};color:${teamInk(g.teams[owner].color)}`;
+        content = r * c;
         if (g.lastClaim === key) cls += " pop";
       } else if (isReveal) {
         cls += " reveal";
         content = g.reveal.product;
       } else {
         cls += " free";
-        if (r === c) cls += " square"; // gold-marked bonus cell (no number shown)
+        if (r === c) cls += " square";
       }
-      if (isTarget) cls += " target";
+      if (isTarget && !isReveal && owner === undefined) cls += " target";
       cells += `<div class="${cls}" style="${style}">${content}</div>`;
     }
   }
@@ -2416,7 +2661,7 @@ function renderG3Scoreboard() {
       const locked = g.lockedTeams.includes(i);
       const sel = i === g.selectedTeam ? "selected" : "";
       return `<button class="g3-team ${sel} ${locked ? "locked" : ""}" data-g3team="${i}" ${locked ? "disabled" : ""}
-                title="${locked ? esc(UI.teamAlreadyTried) : ""}">
+                style="${teamVars(t.color)}" title="${locked ? esc(UI.teamAlreadyTried) : ""}">
           <span class="tk-dot" style="background:${t.color}"></span>
           <span class="g3-team-name">${esc(t.name)}</span>
           <span class="g3-team-score">${t.cells}</span>
@@ -2427,8 +2672,8 @@ function renderG3Scoreboard() {
 
 function renderG3Answer() {
   const g = state.g3;
-  if (g.selectedTeam === null) return `<p class="muted">${UI.pickTeamFirst}</p>`;
-  return `<div class="mc-grid" style="justify-content:center">${g.question.options
+  if (g.selectedTeam === null) return `<p class="pick-hint">${UI.pickTeamFirst}</p>`;
+  return `<div class="mc-grid">${g.question.options
     .map((o, i) => `<button class="mc-btn" data-g3ans="${i}">${o}</button>`)
     .join("")}</div>`;
 }
@@ -2454,51 +2699,51 @@ function g3TableStats(history) {
 function renderG3Win() {
   const g = state.g3;
   const w = g && g.winner != null ? g.teams[g.winner] : null;
-  const standings = g
-    ? g.teams.map((t) => t).sort((a, b) => b.score - a.score || b.cells - a.cells)
-    : [];
-  const rows = standings
-    .map(
-      (t) => `<tr>
-        <td><span class="tk-dot" style="background:${t.color}"></span> ${esc(t.name)}</td>
+  const cmp = (a, b) => b.score - a.score || b.cells - a.cells;
+  const order = g ? rankEntries(g.teams, g.winner, cmp) : [];
+  const entries = order.map((i) => ({
+    name: g.teams[i].name,
+    color: g.teams[i].color,
+    stat: `${UI.g3Points}: ${g.teams[i].score} · ${UI.g3Cells}: ${g.teams[i].cells}`,
+  }));
+  const rows = order
+    .map((i) => {
+      const t = g.teams[i];
+      return `<tr>
+        <td><span class="tk-dot" style="background:${t.color}"></span>${esc(t.name)}</td>
         <td class="num">${t.score}</td>
         <td class="num">${t.cells}</td>
-      </tr>`
-    )
+      </tr>`;
+    })
     .join("");
 
   const history = g ? g.history : [];
   const stats = g3TableStats(history);
-  const tableSection = history.length
-    ? `<table class="insight-table">
-         <thead><tr><th>${UI.g3TableCol}</th><th class="num">${UI.colCorrect}</th><th class="num">${UI.colIncorrect}</th></tr></thead>
-         <tbody>${Array.from({ length: G3_SIZE }, (_, i) => i + 1)
-           .map(
-             (n) => `<tr>
-               <td>×${n}</td>
-               <td class="num good-text">${stats[n].correct}</td>
-               <td class="num bad-text">${stats[n].incorrect}</td>
-             </tr>`
-           )
-           .join("")}</tbody>
-       </table>`
-    : `<p class="muted">${UI.g3NoAttempts}</p>`;
+  const tableRows = Array.from({ length: G3_SIZE }, (_, i) => i + 1).map((n) => ({
+    label: `×${n}`, correct: stats[n].correct, incorrect: stats[n].incorrect,
+  }));
+  const tableSection = history.length ? renderBars(tableRows) : `<p class="muted">${UI.g3NoAttempts}</p>`;
 
   return `
     <div class="podium-screen">
       <div class="podium-trophy">🏆</div>
       <div class="podium-sub">${UI.wonPrefix}</div>
-      <div class="podium-winner" style="color:${w ? w.color : "var(--accent-3)"}">${w ? esc(w.name) : ""}</div>
+      <div class="podium-winner" style="color:${w ? w.color : "var(--go)"}">${w ? esc(w.name) : ""}</div>
+      ${entries.length ? renderPodiumRow(entries) : ""}
     </div>
-    <div class="card g3-standings-card">
-      <h3 style="margin-top:0">${UI.g3Standings}</h3>
-      <table class="insight-table">
-        <thead><tr><th></th><th class="num">${UI.g3Points}</th><th class="num">${UI.g3Cells}</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <h3 style="margin-top:24px">${UI.g3TableTitle}</h3>
-      ${tableSection}
-      <div class="row" style="justify-content:center;margin-top:22px">
+    <div class="results">
+      <div class="card g3-standings-card">
+        <h3>${UI.g3Standings}</h3>
+        <table class="insight-table">
+          <thead><tr><th></th><th class="num">${UI.g3Points}</th><th class="num">${UI.g3Cells}</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div class="card g3-standings-card">
+        <h3>${UI.g3TableTitle}</h3>
+        ${tableSection}
+      </div>
+      <div class="row" style="justify-content:center;margin-top:8px">
         <button class="btn-primary btn-lg" id="g3win-menu">${UI.backToMenu}</button>
       </div>
     </div>`;
@@ -2532,7 +2777,7 @@ function wireG3Play() {
 // =============================================================================
 // ANIMATED BACKGROUND (Kahoot-style drifting shapes) — non-gameplay screens only
 // =============================================================================
-const BGFX_SHAPES = ["➕", "➖", "✖️", "➗", "🔢", "★", "●", "◆", "▲", "✦"];
+const BGFX_SHAPES = ["+", "−", "×", "÷", "=", "7", "3", "<", "9", ">", "2", "%"];
 const BGFX_COUNT = 32; // 2x the prior cap; still transform-only + fully hidden during play (see initBgFx/setBgFxActive)
 let bgFxBuilt = false;
 
@@ -2570,7 +2815,7 @@ function setBgFxActive(active) {
 // animation-duration range. Built once outside #app so it survives every
 // re-render of the play screen without restarting; shown only while
 // state.screen === "play" (see setG1BgFxActive, called from render()).
-const G1_BGFX_SHAPES = ["🔢", "➕", "➖", "✖️", "➗", "🎉", "⭐", "🚀", "🏆", "💥", "🎯", "✨"];
+const G1_BGFX_SHAPES = ["+", "−", "×", "÷", "=", "?", "1", "5", "8", "!", "4", "★"];
 const G1_BGFX_COUNT = 26;
 
 function initG1BgFx() {

@@ -79,18 +79,23 @@ on reaching the final square.
 
 ## Visual theme
 
-Warm cream palette (`--bg #FBF0DA`) with three saturated accents used
-consistently across every screen — coral `#EF5B2B` (primary/buttons), teal
-`#1AA37F` (correct/bonus), gold `#F5A623` (highlight/steal) — plus a 6-colour
-team palette shared by Game 1 scoreboard dots and Game 2 tokens. Typography is
-sized for a projector (body ~25px, question text up to 56px) using rounded
-friendly fonts bundled offline: **Nunito** (Latin/digits) + **Noto Sans
-Georgian** (Georgian), both OFL — see `assets/fonts/CREDITS.md`.
+**"Bright 3D Candy"** — a warm cream base with layered candy-colour mesh,
+chunky pressable 3D buttons (coloured bottom "lip" that sinks on press), and
+extruded candy-block numerals. Signature motif: the **checkered race stripe**
+from the logo's finish flag, used on the landing page, question card, turn
+announcement, podium floor and the Game 2 finish square. Each game has its own
+identity colour — Speed Race orange `#FF5A2C`, Board Race blue `#2E7CF6`,
+Table Conquest mint `#12C29A` — and teams share one 6-colour palette
+(`TOKEN_COLORS` in `app.js`) across every screen.
 
-Animations (all snappy, ≤~500ms): 3D CSS dice-cube tumble, confetti burst +
-score pop on correct, gentle shake on incorrect, trophy pop on win, and a light
-cross-screen fade. All palette/typography/animation live in `styles.css`; game
-logic was untouched this pass.
+Typography (all bundled offline, OFL): **Fredoka** for headings, numbers and
+buttons, **Nunito** for body text, **Noto Sans Georgian** for Georgian. All
+palette/typography/animation tokens live at the top of `styles.css` (`:root`).
+Layout is projector-first and verified at 1920×1080, 1280×720 and 1024×600 with
+no scrolling during play. `prefers-reduced-motion` is respected.
+
+The redesign changed **presentation only**: every game-logic function in
+`app.js` and everything in `src/` is byte-identical to the previous version.
 
 **Adaptive difficulty (class-wide):** every game starts at tier 2. Over a rolling
 window of the last 3 resolved questions — 3 correct bumps the tier up (max 3),
